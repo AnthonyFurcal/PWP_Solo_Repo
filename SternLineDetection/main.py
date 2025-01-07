@@ -46,7 +46,7 @@ def stream():
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         # Thresholding the image to highlight lines (binary image)
-        _, thresh = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY)
+        _, thresh = cv2.threshold(gray, 145, 255, cv2.THRESH_BINARY)
 
         # Blurring the image to reduce noise that makes it more difficult to process
 
@@ -54,7 +54,7 @@ def stream():
 
         # Identifies the edges of all the objects in the image, including drawn lines which we are looking for here.
 
-        edges = cv2.Canny(blur, 100, 200, apertureSize=3)
+        edges = cv2.Canny(blur, 200, 255, apertureSize=3)
 
 
         #These next three lines carve a smaller portion out of the frame that will be sent through processing code to look for lines. This is to avoid information from outside the object of interest from being detected. Output is still displayed with full frame visible
@@ -92,7 +92,7 @@ def stream():
 
                         #Once a parallel pair is found, each of the two lines are then used to calculate both the x and y midpoints which will be used to sort lines into right and left
 
-                        if abs(slope1 - slope2) <= np.deg2rad(50):
+                        if abs(slope1 - slope2) <= np.deg2rad(25):
                             x_midpoint = (x1 + x3) / 2
                             y_midpoint = (y1 + y3) / 2
 

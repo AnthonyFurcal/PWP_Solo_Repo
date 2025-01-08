@@ -50,11 +50,11 @@ def stream():
 
         # Blurring the image to reduce noise that makes it more difficult to process
 
-        blur = cv2.GaussianBlur(thresh, (5, 5), 7)
+        blur = cv2.GaussianBlur(thresh, (7, 7), 7)
 
         # Identifies the edges of all the objects in the image, including drawn lines which we are looking for here.
 
-        edges = cv2.Canny(blur, 200, 255, apertureSize=3)
+        edges = cv2.Canny(blur, 100, 145, apertureSize=3)
 
 
         #These next three lines carve a smaller portion out of the frame that will be sent through processing code to look for lines. This is to avoid information from outside the object of interest from being detected. Output is still displayed with full frame visible
@@ -63,16 +63,22 @@ def stream():
         mask = np.zeros_like(edges)
         mask[height // 4:3 * height // 4, width // 4:3 * width // 4] = edges[height // 4:3 * height // 4, width // 4:3 * width // 4]
 
+      
+
         # OpenCV's function which scans an image for lines
 
-        lines = cv2.HoughLinesP(mask, 1, np.pi / 180, 60, minLineLength=50, maxLineGap=5000)
+        lines = cv2.HoughLinesP(mask, 1, np.pi / 180, 120, minLineLength=50, maxLineGap=5000)
 
         # Creating variables to store line information, list of right and left lines and midpoint variables to help organize the individual line pairs into each
 
         left_lines = []
         right_lines = []
-        x_midpoint = 0
-        y_midpoint = 0
+        x_midpoint = width // 2
+        y_midpoint = height // 2
+        slope1 = 0
+        slope2 = 0
+        bVertical = False
+
 
         #A try statement is used to handle the situation that no lines were detected
 
@@ -82,39 +88,37 @@ def stream():
 
                 for i, line1 in enumerate(lines):
                     x1, y1, x2, y2 = line1[0]
+
                     for j, line2 in enumerate(lines):
                         if i == j:
                             continue
                         x3, y3, x4, y4 = line2[0]
 
-                        slope1 = (y2 - y1) / (x2 - x1) if x2 - x1 != 0 else 0
-                        slope2 = (y4 - y3) / (x4 - x3) if x4 - x3 != 0 else 0
+                        slope1 = (y2 - y1) / (x2 - x1) if x2 - x1 != 0 else None
+                        slope2 = (y4 - y3) / (x4 - x3) if x4 - x3 != 0 else None
 
-                        #Once a parallel pair is found, each of the two lines are then used to calculate both the x and y midpoints which will be used to sort lines into right and left
+                      
+                        #This conditional checks whether the x or the y value vary more in order to determine whether to use the x or y midpoint to determine the orientation of the lanes
 
-                        if abs(slope1 - slope2) <= np.deg2rad(25):
-                            x_midpoint = (x1 + x3) / 2
-                            y_midpoint = (y1 + y3) / 2
+                        if abs(x3 - x1) > abs(y3 - y1):
 
-                            #This conditional checks whether the x or the y value vary more in order to determine whether to use the x or y midpoint to determine the orientation of the lanes
+                            #A minimum amount of space is required for lines to be a pair in order to avoid the sides of one line being detected separately
 
-                            if abs(x3 - x1) > abs(y3 - y1):
-
-                                #A minimum amount of space is required for lines to be a pair in order to avoid the sides of one line being detected separately
-
-                                if x1 > x_midpoint and abs(x3 - x1) > 25:
+                            if x1 > x_midpoint and abs(x3 - x1) > 25:
+                                right_lines.append(line1)
+                                left_lines.append(line2)
+                                bVertical = True
+                            elif x1 < x_midpoint and abs(x3 - x1) > 25:
+                                right_lines.append(line2)
+                                left_lines.append(line1)
+                                bVertical = True
+                        else:
+                            if y1 > y_midpoint and abs(y3 - y1) > 25:
                                     right_lines.append(line1)
                                     left_lines.append(line2)
-                                elif x1 < x_midpoint and abs(x3 - x1) > 25:
-                                    right_lines.append(line2)
-                                    left_lines.append(line1)
-                            else:
-                                if y1 > y_midpoint and abs(y3 - y1) > 25:
-                                    right_lines.append(line1)
-                                    left_lines.append(line2)
-                                elif y1 < y_midpoint and abs(y3 - y1) > 25:
-                                    right_lines.append(line2)
-                                    left_lines.append(line1)
+                            elif y1 < y_midpoint and abs(y3 - y1) > 25:
+                                right_lines.append(line2)
+                                left_lines.append(line1)
 
 
         except TypeError:
@@ -127,9 +131,13 @@ def stream():
 
         # THe centerline is calculated using the averages of the coordinates in the two other lines
 
-        if left_lane is not None and right_lane is not None:
-            centerline = [(left_lane[0] + right_lane[0]) // 2, (left_lane[1] + right_lane[1]) // 2,
-                          (left_lane[2] + right_lane[2]) // 2, (left_lane[3] + right_lane[3]) // 2]
+        if (left_lane is not None and slope1 is not None) and (right_lane is not None and slope2 is not None):
+            if slope1 <= 1 and slope2 <= 1:
+                centerline = [(left_lane[0] + right_lane[0]) // 2, (left_lane[1] + right_lane[1]) // 2,
+                              (left_lane[2] + right_lane[2]) // 2, (left_lane[3] + right_lane[3]) // 2]
+            else:
+                centerline = [(left_lane[0] + right_lane[2]) // 2, (left_lane[1] + right_lane[3]) // 2,
+                              (left_lane[2] + right_lane[0]) // 2, (left_lane[3] + right_lane[1]) // 2]
         else:
             centerline = None
 
@@ -143,6 +151,7 @@ def stream():
         #The camera feed with the line overlay is shown to the user
 
         cv2.imshow('Webcam', frame)
+        cv2.imshow('djkoiwj', mask)
 
         # Inputting q on the keyboard ends the program
 

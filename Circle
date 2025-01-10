@@ -1,0 +1,41 @@
+# THIS IS ANTHONY FURCAL'S PROGRAMMING PROJECT FOR THE PARALLEL LINE AND FINDING CENTER LINE WINTER BREAK ASSIGNMENT
+
+
+from types import NoneType
+
+import cv2
+import numpy as np
+
+# Getting the Camera
+cap = cv2.VideoCapture(0)
+
+
+def stream_processing():
+    while cap.isOpened():
+        ret, frame = cap.read()
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        # Thresholding the image to highlight lines (binary image)
+        _, thresh = cv2.threshold(gray, 165, 255, cv2.THRESH_BINARY)
+
+        # Blurring the image to reduce noise that makes it more difficult to process
+
+        blur = cv2.GaussianBlur(thresh, (5, 5), 3)
+
+        edges = cv2.Canny(blur, 200, 255)
+
+        contours, hierarchy = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        cv2.imshow('Webcam', frame)
+
+        # Inputting q on the keyboard ends the program
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+        # Closing the Window
+    cap.release()
+    cv2.destroyAllWindows()
+
+
+stream_processing()

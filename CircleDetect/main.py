@@ -1,4 +1,4 @@
-# THIS IS ANTHONY FURCAL'S PROGRAMMING PROJECT FOR THE CIRCLE DETECTION ASSIGNMENT
+# THIS IS ANTHONY FURCAL'S CODE FOR THE MOVING CIRCLE DETECTION ASSIGNMENT
 
 
 from types import NoneType
@@ -6,64 +6,56 @@ from types import NoneType
 import cv2
 import numpy as np
 
-img = cv2.imread('SodaPhotos/Can2.jpg')
-kernel = np.ones((255, 255), np.uint8)
+# Getting the Camera
+cap = cv2.VideoCapture('SodaPhotos/IMG_3529.mov')
 
 
 def stream_processing():
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    while cap.isOpened():
 
-    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        ret, frame = cap.read()
 
-    # Thresholding the image to highlight lines (binary image)
-    _, thresh = cv2.threshold(blur, 145, 255, cv2.THRESH_BINARY)
-    masked_image = cv2.bitwise_and(blur, blur, mask=thresh)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    # Blurring the image to reduce noise that makes it more difficult to process
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
 
-    circles = cv2.HoughCircles(masked_image, cv2.HOUGH_GRADIENT, 1, 255,
-                               param1=100, param2=70, minRadius=50, maxRadius=0)
+        # Thresholding the image to highlight lines (binary image)
+        _, thresh = cv2.threshold(blur, 125, 135, cv2.THRESH_BINARY)
+        masked_image = cv2.bitwise_and(blur, blur, mask=thresh)
 
-    try:
+        edges = cv2.Canny(masked_image, 25, 85)
 
-        circles = np.uint16(np.around(circles))
-        for i in circles[0, :]:
-            # draw the outer circle
-            cv2.circle(img, (i[0], i[1]), i[2], (0, 255, 0), 10)
-            # draw the center of the circle
-            cv2.circle(img, (i[0], i[1]), 2, (0, 0, 255), 10)
+        # Blurring the image to reduce noise that makes it more difficult to process
 
-        # Create a named window
-        cv2.namedWindow('Photo', cv2.WINDOW_NORMAL)
+        circles = cv2.HoughCircles(edges, cv2.HOUGH_GRADIENT, 1, 455,
+                                   param1=155, param2=115, minRadius=95, maxRadius=0)
 
-        # Resize the window
-        cv2.resizeWindow('Photo', 800, 600)
+        try:
 
-        cv2.imshow('Photo', img)
-        cv2.waitKey(0)
+            circles = np.uint16(np.around(circles))
+            for i in circles[0, :]:
+                # draw the outer circle
+                cv2.circle(frame, (i[0], i[1]), i[2], (0, 255, 0), 5)
+                # draw the center of the circle
+                cv2.circle(frame, (i[0], i[1]), 2, (0, 0, 255), 5)
 
-        # Inputting q on the keyboard ends the program
+        # This is an exception in case no circles are detected in the frame
+        except TypeError:
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            # Closing the Window
-            cv2.destroyAllWindows()
+            print("No Circles Found")
 
-    except TypeError:
+        # Displays the processed frame
 
-        cv2.namedWindow('Photo', cv2.WINDOW_NORMAL)
-
-        # Resize the window
-        cv2.resizeWindow('Photo', 800, 600)
-
-        cv2.imshow('Photo', thresh)
-        cv2.waitKey(0)
+        cv2.imshow('Photo', frame)
 
         # Inputting q on the keyboard ends the program
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
-            # Closing the Window
-            cv2.destroyAllWindows()
-        print("No Circles Found")
+            break
+
+    # Closing the Window
+    cv2.destroyAllWindows()
+    cap.release()
 
 
 stream_processing()

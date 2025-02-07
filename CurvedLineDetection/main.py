@@ -5,7 +5,23 @@ from scipy.interpolate import CubicSpline
 # Getting the Camera
 cap = cv2.VideoCapture(0)
 
-BGS = cv2.createBackgroundSubtractorMOG2()
+# Interpolate points to increase the number of contour points for smoother centerline
+
+def interpolate_contour(contour, num_points=20):
+        contour_points = contour.reshape(-1, 2)
+        x = contour_points[:, 0]
+        y = contour_points[:, 1]
+
+        # Fit cubic spline to the contour points
+        cs_x = CubicSpline(np.arange(len(x)), x)
+        cs_y = CubicSpline(np.arange(len(y)), y)
+
+        # Generate smooth points along the spline (interpolating 500 points)
+        smooth_x = cs_x(np.linspace(0, len(x) - 1, num_points))
+        smooth_y = cs_y(np.linspace(0, len(y) - 1, num_points))
+
+        return np.vstack((smooth_x, smooth_y)).astype(np.int32).T
+
 
 def stream():
     while cap.isOpened():
@@ -65,21 +81,8 @@ def stream():
                 # Step 8: Generate centerline by averaging points from left and right contours
             centerline = []
 
-            # Interpolate points to increase the number of contour points for smoother centerline
-            def interpolate_contour(contour, num_points=20):
-                contour_points = contour.reshape(-1, 2)
-                x = contour_points[:, 0]
-                y = contour_points[:, 1]
-
-                # Fit cubic spline to the contour points
-                cs_x = CubicSpline(np.arange(len(x)), x)
-                cs_y = CubicSpline(np.arange(len(y)), y)
-
-                # Generate smooth points along the spline (interpolating 500 points)
-                smooth_x = cs_x(np.linspace(0, len(x) - 1, num_points))
-                smooth_y = cs_y(np.linspace(0, len(y) - 1, num_points))
-
-                return np.vstack((smooth_x, smooth_y)).astype(np.int32).T
+            
+            
 
             # Interpolate left and right contours
             left_contours_interp = [interpolate_contour(contour) for contour in left_contours]

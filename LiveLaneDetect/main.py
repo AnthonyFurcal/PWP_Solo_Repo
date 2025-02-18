@@ -8,6 +8,7 @@ from scipy.interpolate import CubicSpline
 # Getting the Camera
 cap = cv2.VideoCapture('VideoFootage/car.mov')
 
+
 def warp_frame(image):
     # Four corners of the trapezoid-shaped region of interest
     # You need to find these corners manually.
@@ -17,6 +18,7 @@ def warp_frame(image):
         (480, 237),  # Bottom-right corner
         (380, 174)  # Top-right corner
     ])
+
 
     dest_points = np.array([
         (0, 0),
@@ -28,11 +30,12 @@ def warp_frame(image):
     pts = np.float32(roi_points)
     pts2 = np.float32(dest_points)
 
-    perspesctiveMatrix = cv2.getPerspectiveTransform(pts, pts2)
+    perspectiveMatrix = cv2.getPerspectiveTransform(pts, pts2)
 
-    result = cv2.warpPerspective(image, perspesctiveMatrix, (640, 360))
+    result = cv2.warpPerspective(image, perspectiveMatrix, (640, 360))
 
     return result
+
 
 def interpolate_contour(contour, num_points=20):
     contour_points = contour.reshape(-1, 2)
@@ -51,7 +54,6 @@ def interpolate_contour(contour, num_points=20):
 
 
 def find_lines(filtered_image, original_image):
-
     contours, hierarchy = cv2.findContours(filtered_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     # Step 1: Compute centroids of all contours and calculate the average center point
@@ -134,6 +136,7 @@ def skeletonize(image):
 
     return skeleton
 
+
 def stream_processing():
     while cap.isOpened():
 
@@ -141,15 +144,17 @@ def stream_processing():
 
         resized_frame = cv2.resize(frame, (640, 360))
 
-        gray = cv2.cvtColor(resized_frame, cv2.COLOR_BGR2GRAY)
+        blur = cv2.GaussianBlur(resized_frame, (7, 7), 5)
 
-        blur = cv2.GaussianBlur(gray, (7, 7), 0)
+        gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
+
+
 
         # Thresholding the image to highlight lines (binary image)
-        _, mask = cv2.threshold(blur, 165, 185, cv2.THRESH_BINARY)
-        masked_image = cv2.bitwise_and(blur, blur, mask=mask)
+        _, mask = cv2.threshold(gray, 95, 125, cv2.THRESH_BINARY)
+        masked_image = cv2.bitwise_and(gray, gray, mask=mask)
 
-        edges = cv2.Canny(masked_image, 45, 65)
+        edges = cv2.Canny(masked_image, 35, 55)
 
         # skeleton = skeletonize(edges)
 
@@ -158,10 +163,9 @@ def stream_processing():
 
         with_lines = find_lines(warped_edge, warped_reg)
 
-
         # Displays the processed frame
 
-        cv2.imshow('Photo', edges)
+        cv2.imshow('Photo', resized_frame)
         cv2.imshow('Photo2', with_lines)
         print(cv2.getWindowImageRect('Photo2'))
 
@@ -176,4 +180,3 @@ def stream_processing():
 
 
 stream_processing()
-
